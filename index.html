@@ -1,21 +1,237 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Under Construction</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doll-E 1.0 Tech Vocabulary Lab</title>
     <style>
-      html,body{height:100%;margin:0}
-      body{display:flex;align-items:center;justify-content:center;background:#111;color:#f5f5f5;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-      .card{text-align:center;padding:2rem;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));box-shadow:0 6px 24px rgba(0,0,0,0.6)}
-      h1{margin:0 0 .5rem;font-size:clamp(1.5rem,4vw,2.5rem)}
-      p{margin:0;opacity:.8}
+        :root {
+            --bg-color: #f3f4f6;
+            --panel-bg: #ffffff;
+            --primary-teal: #4ea8de;
+            --accent-coral: #ff7096;
+            --soft-purple: #b5179e;
+            --text-dark: #2b2d42;
+            --border-color: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; }
+        header h1 { color: var(--soft-purple); font-size: 2.5rem; margin-bottom: 5px; }
+        header p { color: #64748b; font-style: italic; }
+
+        .game-container { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; flex: 1; max-width: 1400px; width: 100%; margin: 0 auto; }
+        @media (max-width: 1024px) { .game-container { grid-template-columns: 1fr; } }
+
+        .panel { background: var(--panel-bg); border: 3px solid var(--border-color); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .panel-title { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px dashed var(--border-color); color: #475569; }
+
+        .image-placeholder { border: 3px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-weight: bold; padding: 20px; flex: 1; min-height: 200px; transition: all 0.3s ease; }
+        #center-panel { border-color: var(--primary-teal); }
+        .stats-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
+        
+        .upgrade-container { margin-bottom: 20px; }
+        .upgrade-label { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: var(--primary-teal); }
+        .upgrade-bar-outer { width: 100%; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; border: 1px solid #cbd5e1; }
+        .upgrade-bar-inner { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary-teal), var(--accent-coral)); transition: width 0.4s ease; }
+
+        .pulse-glow { animation: glow 1s ease-in-out 2; }
+        @keyframes glow {
+            0% { border-color: #cbd5e1; box-shadow: none; }
+            50% { border-color: var(--accent-coral); box-shadow: 0 0 20px var(--accent-coral); }
+            100% { border-color: #cbd5e1; box-shadow: none; }
+        }
+
+        .puzzle-box { background: #fafafa; border: 2px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; font-size: 1.2rem; line-height: 1.6; }
+        .blank-space { display: inline-block; min-width: 120px; border-bottom: 3px solid var(--soft-purple); text-align: center; color: var(--soft-purple); font-weight: bold; }
+
+        .button-zone { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .component-btn { background: white; border: 2px solid var(--primary-teal); border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: var(--text-dark); }
+        .component-btn:hover { background: #f0f9ff; transform: translateX(5px); border-color: var(--soft-purple); }
+
+        .copilot-btn { width: 100%; background: var(--accent-coral); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
+        
+        /* Modal UI Layout */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; border: 3px solid var(--accent-coral); text-align: center; }
+        .modal-content h3 { color: var(--accent-coral); margin-bottom: 12px; }
+        .modal-content p { margin-bottom: 20px; line-height: 1.5; font-size: 1.05rem; white-space: pre-line; }
+        .close-btn { background: #64748b; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+
+        .leaderboard-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color); font-weight: 500; }
+        .input-form { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 20px; }
+        .input-form input { padding: 8px; text-transform: uppercase; text-align: center; font-size: 1.2rem; width: 80px; }
     </style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>Under construction</h1>
-      <p>We're working on something great. Check back soon.</p>
+</head>
+<body>
+
+    <header>
+        <h1>Doll-E 1.0 Vocabulary Lab</h1>
+        <p>Help Charlotte upgrade Doll-E by matching the correct components!</p>
+    </header>
+
+    <div class="game-container">
+        <div class="panel">
+            <div class="panel-title">1. Charlotte & Bluetooth Lab View</div>
+            <div class="image-placeholder" id="lab-visual">[Drop Lab Artwork Here]</div>
+        </div>
+
+        <div class="panel" id="center-panel">
+            <div class="panel-title">2. Doll-E 1.0 Upgrade Monitor</div>
+            <div class="stats-bar">
+                <span id="round-counter">Round: 1 / 8</span>
+                <span id="score-display">Score: 0</span>
+            </div>
+            <div class="upgrade-container">
+                <div class="upgrade-label">SYSTEM UPGRADE PROGRESS</div>
+                <div class="upgrade-bar-outer"><div class="upgrade-bar-inner" id="upgrade-bar"></div></div>
+            </div>
+            <div id="game-workspace">
+                <div class="puzzle-box" id="puzzle-sentence">Booting software circuits...</div>
+                <div class="button-zone" id="choices-zone"></div>
+                <button class="copilot-btn" id="copilot-trigger">🤖 Consult Gemini AI Copilot</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">3. Tech Lab Leaderboard</div>
+            <ul style="list-style: none;" id="leaderboard-display"></ul>
+        </div>
     </div>
-  </body>
+
+    <div class="modal-overlay" id="copilot-modal">
+        <div class="modal-content">
+            <h3>✨ Gemini Copilot Uplink</h3>
+            <p id="copilot-hint-text">Synchronizing arrays...</p>
+            <button class="close-btn" id="modal-close">Close Uplink</button>
+        </div>
+    </div>
+
+    <script>
+        // Updated URL path mapping to match back.js dynamically
+        const VERCEL_BACKEND_URL = "https://doll-e.vercel.app/api/back";
+
+        const vocabularyDataset = [
+            { word: "tinkering", sentence: "Charlotte spent hours in her workshop, ________ with old gadgets and wires.", distractors: ["sleeping", "running"], fallbackHint: "Tinkering means fixing or experimenting with things. (擺弄、修理修配)" },
+            { word: "toggling", sentence: "Try ________ the power switch back and forth if the terminal is frozen.", distractors: ["throwing", "painting"], fallbackHint: "Toggling means switching a button back and forth. (切換開關)" },
+            { word: "always in the cloud", sentence: "Charlotte’s ideas are never grounded; her thoughts are completely ________.", distractors: ["under the rug", "lost in the ocean"], fallbackHint: "Always in the cloud means high-up creative thinking or network data storage. (思想開闊/雲端儲存)" },
+            { word: "smarty-pants", sentence: "Bluetooth proved to be a real ________ by finding the loose wire first!", distractors: ["slow-poke", "trouble-maker"], fallbackHint: "A smarty-pants is a playful word for someone very clever. (小機靈鬼)" },
+            { word: "fully charged", sentence: "Once the indicator turned solid green, Doll-E 1.0 was ________.", distractors: ["completely broken", "half empty"], fallbackHint: "Fully charged means a battery has 100% juice. (電量充滿)" },
+            { word: "decoder", sentence: "She plugged in the digital ________ chip to transform the weird glitch sounds into words.", distractors: ["hammer", "battery charger"], fallbackHint: "A decoder unlocks hidden codes. (解碼器)" },
+            { word: "spare-parts", sentence: "Charlotte looked through her box of ________ to find a replacement wheel.", distractors: ["comic books", "old clothes"], fallbackHint: "Spare-parts are extra pieces to fix broken things. (備用零件)" },
+            { word: "database", sentence: "The robot accessed its memory ________ to recall its favorite commands.", distractors: ["fuel tank", "toolbox"], fallbackHint: "A database is a big digital filing cabinet for information storage. (資料庫)" }
+        ];
+
+        let currentRound = 0;
+        let runningScore = 0;
+        const totalRounds = vocabularyDataset.length;
+
+        const scoreDisplay = document.getElementById('score-display');
+        const roundCounter = document.getElementById('round-counter');
+        const upgradeBar = document.getElementById('upgrade-bar');
+        const labVisual = document.getElementById('lab-visual');
+        const puzzleSentence = document.getElementById('puzzle-sentence');
+        const choicesZone = document.getElementById('choices-zone');
+        const copilotModal = document.getElementById('copilot-modal');
+        const copilotHintText = document.getElementById('copilot-hint-text');
+        const copilotTrigger = document.getElementById('copilot-trigger');
+        const modalClose = document.getElementById('modal-close');
+        const leaderboardDisplay = document.getElementById('leaderboard-display');
+
+        window.addEventListener('DOMContentLoaded', () => { renderLeaderboard(); loadRound(); });
+        modalClose.addEventListener('click', () => copilotModal.style.display = 'none');
+
+        copilotTrigger.addEventListener('click', async () => {
+            copilotHintText.textContent = "🤖 Calling Gemini Core System via Vercel...";
+            copilotModal.style.display = 'flex';
+
+            const activeQuestion = vocabularyDataset[currentRound];
+
+            try {
+                const networkResponse = await fetch(VERCEL_BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        word: activeQuestion.word,
+                        hintContext: activeQuestion.sentence
+                    })
+                });
+
+                if (!networkResponse.ok) throw new Error("Server failed processing API handshake.");
+                
+                const responseData = await networkResponse.json();
+                copilotHintText.textContent = responseData.hint;
+
+            } catch (err) {
+                console.warn("API Error: ", err.message);
+                copilotHintText.textContent = `⚙️ [Offline Engine Mode]\n\n${activeQuestion.fallbackHint}`;
+            }
+        });
+
+        function loadRound() {
+            if (currentRound >= totalRounds) { return endSimulation(); }
+            roundCounter.textContent = `Round: ${currentRound + 1} / ${totalRounds}`;
+            scoreDisplay.textContent = `Score: ${runningScore}`;
+            
+            let data = vocabularyDataset[currentRound];
+            puzzleSentence.innerHTML = data.sentence.replace("________", "<span class='blank-space'>[???]</span>");
+
+            let buttons = [data.word, ...data.distractors].sort(() => Math.random() - 0.5);
+            choicesZone.innerHTML = '';
+            buttons.forEach(txt => {
+                const b = document.createElement('button');
+                b.className = 'component-btn';
+                b.textContent = txt;
+                b.onclick = () => evalAnswer(txt, data.word);
+                choicesZone.appendChild(b);
+            });
+        }
+
+        function evalAnswer(chosen, correct) {
+            if (chosen === correct) {
+                runningScore += 100;
+                labVisual.classList.add('pulse-glow');
+                setTimeout(() => labVisual.classList.remove('pulse-glow'), 1200);
+            } else {
+                runningScore = Math.max(0, runningScore - 25);
+            }
+            currentRound++;
+            upgradeBar.style.width = `${(currentRound / totalRounds) * 100}%`;
+            setTimeout(loadRound, 300);
+        }
+
+        function endSimulation() {
+            puzzleSentence.innerHTML = `🏆 <b>Simulation Complete!</b><br>Final score: <b>${runningScore}</b> points.`;
+            if (qualifiesForLeaderboard(runningScore)) {
+                choicesZone.innerHTML = `
+                    <div class="input-form">
+                        <p>High Score! Enter 3 letters:</p>
+                        <input type="text" id="initials" maxlength="3" placeholder="BLU">
+                        <button class="component-btn" id="save-btn">Save to Core</button>
+                    </div>`;
+                document.getElementById('save-btn').onclick = saveScore;
+            } else {
+                choicesZone.innerHTML = `<button class="component-btn" onclick="location.reload()">Reboot Game</button>`;
+            }
+        }
+
+        function getScores() { return JSON.parse(localStorage.getItem('dll_lb')) || [{name:"CHA",score:500},{name:"BLU",score:300}]; }
+        function renderLeaderboard() {
+            leaderboardDisplay.innerHTML = '';
+            getScores().forEach((e, i) => {
+                leaderboardDisplay.innerHTML += `<li class="leaderboard-item"><span>#${i+1} ${e.name}</span><span>${e.score} pts</span></li>`;
+            });
+        }
+        function qualifiesForLeaderboard(s) { let sc = getScores(); return sc.length < 5 || s > sc[sc.length-1].score; }
+        function saveScore() {
+            let nm = document.getElementById('initials').value.toUpperCase().trim() || "AAA";
+            let sc = getScores(); sc.push({name:nm, score:runningScore});
+            sc.sort((a,b)=>b.score-a.score);
+            localStorage.setItem('dll_lb', JSON.stringify(sc.slice(0,5)));
+            renderLeaderboard();
+            choicesZone.innerHTML = `<button class="component-btn" onclick="location.reload()">Reboot Game</button>`;
+        }
+    </script>
+</body>
 </html>
