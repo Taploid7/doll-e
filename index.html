@@ -71,10 +71,16 @@
         .copilot-btn { width: 100%; background: var(--accent-coral); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; border: 3px solid var(--accent-coral); text-align: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; max-width: 500px; width: 90%; border: 3px solid var(--accent-coral); text-align: center; }
         .modal-content h3 { color: var(--accent-coral); margin-bottom: 12px; }
-        .modal-content p { margin-bottom: 20px; line-height: 1.5; font-size: 1.05rem; white-space: pre-line; }
-        .close-btn { background: #64748b; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+        .modal-content p { margin-bottom: 20px; line-height: 1.5; font-size: 1.05rem; white-space: pre-line; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 200px; overflow-y: auto; }
+        
+        .followup-zone { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .followup-input { width: 100%; padding: 10px; border: 2px solid var(--primary-teal); border-radius: 8px; font-size: 0.95rem; outline: none; }
+        .followup-submit { background: var(--primary-teal); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.95rem; }
+        .followup-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .close-btn { background: #64748b; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; width: 100%; }
 
         .leaderboard-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color); font-weight: 500; }
         .input-form { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 20px; }
@@ -122,8 +128,14 @@
 
     <div class="modal-overlay" id="copilot-modal">
         <div class="modal-content">
-            <h3>AI Help Hub</h3>
+            <h3 id="modal-heading">AI Help Hub</h3>
             <p id="copilot-hint-text">Synchronizing arrays...</p>
+            
+            <div class="followup-zone">
+                <input type="text" id="followup-input" class="followup-input" placeholder="Type a question here...">
+                <button id="followup-submit" class="followup-submit">Send Message</button>
+            </div>
+
             <button class="close-btn" id="modal-close">Close</button>
         </div>
     </div>
@@ -131,7 +143,7 @@
     <script>
         const VERCEL_BACKEND_URL = "https://doll-e.vercel.app/api/back";
 
-        const vocabularyDataset = [
+        let vocabularyDataset = [
             { word: "tinkering", sentence: "Charlotte spent hours in her workshop, ________ with old gadgets and wires.", distractors: ["sleeping", "running"], fallbackHint: "Tinkering means fixing or experimenting with things. (擺弄、修理修配)" },
             { word: "toggling", sentence: "Try ________ the power switch back and forth if the terminal is frozen.", distractors: ["throwing", "painting"], fallbackHint: "Toggling means switching a button back and forth. (切換開關)" },
             { word: "always in the cloud", sentence: "Charlotte’s ideas are never grounded; her thoughts are completely ________.", distractors: ["under the rug", "lost in the ocean"], fallbackHint: "Always in the cloud means high-up creative thinking or network data storage. (思想開闊/雲端儲存)" },
@@ -142,8 +154,11 @@
             { word: "database", sentence: "The robot accessed its memory ________ to recall its favorite commands.", distractors: ["fuel tank", "toolbox"], fallbackHint: "A database is a big digital filing cabinet for information storage. (資料庫)" }
         ];
 
+        vocabularyDataset.sort(() => Math.random() - 0.5);
+
         let currentRound = 0;
         let runningScore = 0;
+        let isGameOver = false;
         const totalRounds = vocabularyDataset.length;
 
         const scoreDisplay = document.getElementById('score-display');
@@ -157,54 +172,92 @@
         const copilotHintText = document.getElementById('copilot-hint-text');
         const copilotTrigger = document.getElementById('copilot-trigger');
         const modalClose = document.getElementById('modal-close');
+        const followupInput = document.getElementById('followup-input');
+        const followupSubmit = document.getElementById('followup-submit');
         const leaderboardDisplay = document.getElementById('leaderboard-display');
+        const modalHeading = document.getElementById('modal-heading');
 
         window.addEventListener('DOMContentLoaded', () => { renderLeaderboard(); loadRound(); });
         modalClose.addEventListener('click', () => copilotModal.style.display = 'none');
 
-        copilotTrigger.addEventListener('click', async () => {
-            copilotHintText.textContent = "Calling Core System...";
-            copilotModal.style.display = 'flex';
+        async function fetchAIHint(customQuestion = null) {
+            let payload = {};
 
-            const activeQuestion = vocabularyDataset[currentRound];
-            
-            console.group("📡 Gemini AI Handshake Initialized");
-            console.log("Target Endpoint Target:", VERCEL_BACKEND_URL);
-            console.log("Payload Content Sent:", { word: activeQuestion.word, context: activeQuestion.sentence });
+            if (isGameOver) {
+                payload = {
+                    isGeneralChat: true,
+                    followupQuestion: customQuestion || "Hello Charlotte!"
+                };
+                if (!customQuestion) copilotHintText.textContent = "Connecting to Charlotte's Chatroom...";
+            } else {
+                const activeQuestion = vocabularyDataset[currentRound];
+                payload = {
+                    word: activeQuestion.word,
+                    hintContext: activeQuestion.sentence
+                };
+                if (customQuestion) {
+                    payload.followupQuestion = customQuestion;
+                    copilotHintText.textContent += "\n\nThinking about follow-up...";
+                } else {
+                    copilotHintText.textContent = "Calling Core System...";
+                }
+            }
 
             try {
-                const startTime = performance.now();
                 const networkResponse = await fetch(VERCEL_BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        word: activeQuestion.word,
-                        hintContext: activeQuestion.sentence
-                    })
+                    body: JSON.stringify(payload)
                 });
 
-                const endTime = performance.now();
-                console.log(`HTTP Status Response Return: ${networkResponse.status} (${networkResponse.statusText})`);
-                console.log(`Network Transaction Latency Time: ${(endTime - startTime).toFixed(2)}ms`);
-
-                if (!networkResponse.ok) {
-                    throw new Error(`Upstream handshake failure error signal. Status code received: ${networkResponse.status}`);
-                }
-                
+                if (!networkResponse.ok) throw new Error("Handshake issue");
                 const responseData = await networkResponse.json();
-                console.log("Payload Package Received Cleanly:", responseData);
-                console.groupEnd();
                 
-                copilotHintText.textContent = responseData.hint;
-
+                if (isGameOver) {
+                    if (customQuestion) {
+                        copilotHintText.textContent += `\n\n💬 Q: ${customQuestion}\n🤖 AI: ${responseData.hint}`;
+                    } else {
+                        copilotHintText.textContent = `🤖 Assistant Online. Ask me anything about the game terms!\n\nAI: ${responseData.hint}`;
+                    }
+                } else {
+                    if (customQuestion) {
+                        copilotHintText.textContent += `\n\n💬 Q: ${customQuestion}\n🤖 AI: ${responseData.hint}`;
+                    } else {
+                        copilotHintText.textContent = responseData.hint;
+                    }
+                }
             } catch (err) {
-                console.error("🔴 Connection Bridge Interrupt Fault Block Detected:");
-                console.error("Error Diagnostics Message:", err.message);
-                console.warn("🔄 Safe System Routing Mode Engaged: Falling back to static prompt dictionary cache entry.");
-                console.groupEnd();
-                
-                copilotHintText.textContent = `⚙️ [Offline Engine Mode]\n\n${activeQuestion.fallbackHint}`;
+                if (isGameOver) {
+                    copilotHintText.textContent = "⚠️ Chat server offline.";
+                } else {
+                    copilotHintText.textContent = `⚙️ [Offline Engine Mode]\n\n${vocabularyDataset[currentRound].fallbackHint}`;
+                }
+            } finally {
+                followupInput.value = "";
+                followupSubmit.disabled = false;
             }
+        }
+
+        copilotTrigger.addEventListener('click', () => {
+            copilotModal.style.display = 'flex';
+            if (isGameOver) {
+                modalHeading.textContent = "Lab Open Chatroom";
+                fetchAIHint();
+            } else {
+                modalHeading.textContent = "AI Help Hub";
+                fetchAIHint();
+            }
+        });
+
+        followupSubmit.addEventListener('click', () => {
+            const question = followupInput.value.trim();
+            if (!question) return;
+            followupSubmit.disabled = true;
+            fetchAIHint(question);
+        });
+
+        followupInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') followupSubmit.click();
         });
 
         function loadRound() {
@@ -277,7 +330,9 @@
         }
 
         function endSimulation() {
+            isGameOver = true;
             statusFeedback.textContent = "";
+            copilotTrigger.textContent = "💬 Chat with AI";
             puzzleSentence.innerHTML = `🏆 <b>Simulation Complete!</b><br>Final score: <b>${runningScore}</b> points.`;
             if (qualifiesForLeaderboard(runningScore)) {
                 choicesZone.innerHTML = `
