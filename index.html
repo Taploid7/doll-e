@@ -43,6 +43,23 @@
             100% { border-color: #cbd5e1; box-shadow: none; }
         }
 
+        .correct-blink { animation: flash-green 0.4s ease-out; }
+        .incorrect-blink { animation: flash-red 0.4s ease-out; }
+
+        @keyframes flash-green {
+            0% { background-color: var(--bg-color); }
+            50% { background-color: #d4edda; }
+            100% { background-color: var(--bg-color); }
+        }
+
+        @keyframes flash-red {
+            0% { background-color: var(--bg-color); }
+            50% { background-color: #f8d7da; }
+            100% { background-color: var(--bg-color); }
+        }
+
+        .feedback-text { font-weight: bold; font-size: 1.1rem; margin-bottom: 15px; text-align: center; min-height: 24px; transition: all 0.2s ease; }
+
         .puzzle-box { background: #fafafa; border: 2px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; font-size: 1.2rem; line-height: 1.6; }
         .blank-space { display: inline-block; min-width: 120px; border-bottom: 3px solid var(--soft-purple); text-align: center; color: var(--soft-purple); font-weight: bold; }
 
@@ -74,7 +91,7 @@
         <div class="panel">
             <div class="panel-title">1. Lab View</div>
             <div class="image-placeholder" id="lab-visual">
-                <img id="doll-e-asset" src="charlotte-base.png" alt="Doll-E Base Panel Asset" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s ease, transform 0.5s ease;">
+                <img id="doll-e-asset" src="charlotte-base.jpg" alt="Doll-E Base Panel Asset" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s ease, transform 0.5s ease;">
             </div>
         </div>
 
@@ -90,6 +107,7 @@
             </div>
             <div id="game-workspace">
                 <div class="puzzle-box" id="puzzle-sentence">Booting software circuits...</div>
+                <div id="status-feedback" class="feedback-text"></div>
                 <div class="button-zone" id="choices-zone"></div>
                 <button class="copilot-btn" id="copilot-trigger">詢問 AI</button>
             </div>
@@ -132,6 +150,7 @@
         const upgradeBar = document.getElementById('upgrade-bar');
         const labVisual = document.getElementById('lab-visual');
         const puzzleSentence = document.getElementById('puzzle-sentence');
+        const statusFeedback = document.getElementById('status-feedback');
         const choicesZone = document.getElementById('choices-zone');
         const copilotModal = document.getElementById('copilot-modal');
         const copilotHintText = document.getElementById('copilot-hint-text');
@@ -191,6 +210,7 @@
             if (currentRound >= totalRounds) { return endSimulation(); }
             roundCounter.textContent = `Round: ${currentRound + 1} / ${totalRounds}`;
             scoreDisplay.textContent = `Score: ${runningScore}`;
+            statusFeedback.textContent = "";
             
             let data = vocabularyDataset[currentRound];
             puzzleSentence.innerHTML = data.sentence.replace("________", "<span class='blank-space'>[???]</span>");
@@ -211,10 +231,21 @@
 
             if (chosen === correct) {
                 runningScore += 100;
+                statusFeedback.textContent = "✨ Correct Setup Connected!";
+                statusFeedback.style.color = "#2a9d8f";
+                
+                document.body.classList.add('correct-blink');
+                setTimeout(() => document.body.classList.remove('correct-blink'), 400);
+
                 labVisual.classList.add('pulse-glow');
                 setTimeout(() => labVisual.classList.remove('pulse-glow'), 1200);
             } else {
                 runningScore = Math.max(0, runningScore - 25);
+                statusFeedback.textContent = "❌ Circuit Glitch! Try again.";
+                statusFeedback.style.color = "var(--accent-coral)";
+
+                document.body.classList.add('incorrect-blink');
+                setTimeout(() => document.body.classList.remove('incorrect-blink'), 400);
             }
             
             currentRound++;
@@ -232,10 +263,11 @@
                 }
             }
 
-            setTimeout(loadRound, 300);
+            setTimeout(loadRound, 800);
         }
 
         function endSimulation() {
+            statusFeedback.textContent = "";
             puzzleSentence.innerHTML = `🏆 <b>Simulation Complete!</b><br>Final score: <b>${runningScore}</b> points.`;
             if (qualifiesForLeaderboard(runningScore)) {
                 choicesZone.innerHTML = `
