@@ -27,7 +27,7 @@
         .panel { background: var(--panel-bg); border: 3px solid var(--border-color); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .panel-title { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px dashed var(--border-color); color: #475569; }
 
-        .image-placeholder { border: 3px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-weight: bold; padding: 20px; flex: 1; min-height: 200px; transition: all 0.3s ease; }
+        .image-placeholder { border: 3px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-weight: bold; padding: 0; flex: 1; min-height: 200px; transition: all 0.3s ease; overflow: hidden; }
         #center-panel { border-color: var(--primary-teal); }
         .stats-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
         
@@ -52,7 +52,6 @@
 
         .copilot-btn { width: 100%; background: var(--accent-coral); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
         
-        /* Modal UI Layout */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; border: 3px solid var(--accent-coral); text-align: center; }
         .modal-content h3 { color: var(--accent-coral); margin-bottom: 12px; }
@@ -67,18 +66,20 @@
 <body>
 
     <header>
-        <h1>Doll-E 1.0 Vocabulary Lab</h1>
-        <p>Help Charlotte upgrade Doll-E by matching the correct components!</p>
+        <h1>Doll-E 1.0 Tech Vocabulary Lab</h1>
+        <p>Help Charlotte upgrade Doll-E by answering the questions correctly!</p>
     </header>
 
     <div class="game-container">
         <div class="panel">
-            <div class="panel-title">1. Charlotte & Bluetooth Lab View</div>
-            <div class="image-placeholder" id="lab-visual">[Drop Lab Artwork Here]</div>
+            <div class="panel-title">1. Lab View</div>
+            <div class="image-placeholder" id="lab-visual">
+                <img id="doll-e-asset" src="charlotte-base.png" alt="Doll-E Base Panel Asset" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s ease, transform 0.5s ease;">
+            </div>
         </div>
 
         <div class="panel" id="center-panel">
-            <div class="panel-title">2. Doll-E 1.0 Upgrade Monitor</div>
+            <div class="panel-title">2. Doll-E 1.0 Upgrades</div>
             <div class="stats-bar">
                 <span id="round-counter">Round: 1 / 8</span>
                 <span id="score-display">Score: 0</span>
@@ -90,7 +91,7 @@
             <div id="game-workspace">
                 <div class="puzzle-box" id="puzzle-sentence">Booting software circuits...</div>
                 <div class="button-zone" id="choices-zone"></div>
-                <button class="copilot-btn" id="copilot-trigger">🤖 Consult Gemini AI Copilot</button>
+                <button class="copilot-btn" id="copilot-trigger">詢問 AI</button>
             </div>
         </div>
 
@@ -102,14 +103,13 @@
 
     <div class="modal-overlay" id="copilot-modal">
         <div class="modal-content">
-            <h3>✨ Gemini Copilot Uplink</h3>
+            <h3>AI Help Hub</h3>
             <p id="copilot-hint-text">Synchronizing arrays...</p>
-            <button class="close-btn" id="modal-close">Close Uplink</button>
+            <button class="close-btn" id="modal-close">Close</button>
         </div>
     </div>
 
     <script>
-        // Updated URL path mapping to match back.js dynamically
         const VERCEL_BACKEND_URL = "https://doll-e.vercel.app/api/back";
 
         const vocabularyDataset = [
@@ -143,12 +143,17 @@
         modalClose.addEventListener('click', () => copilotModal.style.display = 'none');
 
         copilotTrigger.addEventListener('click', async () => {
-            copilotHintText.textContent = "🤖 Calling Gemini Core System via Vercel...";
+            copilotHintText.textContent = "Calling Core System...";
             copilotModal.style.display = 'flex';
 
             const activeQuestion = vocabularyDataset[currentRound];
+            
+            console.group("📡 Gemini AI Handshake Initialized");
+            console.log("Target Endpoint Target:", VERCEL_BACKEND_URL);
+            console.log("Payload Content Sent:", { word: activeQuestion.word, context: activeQuestion.sentence });
 
             try {
+                const startTime = performance.now();
                 const networkResponse = await fetch(VERCEL_BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -158,13 +163,26 @@
                     })
                 });
 
-                if (!networkResponse.ok) throw new Error("Server failed processing API handshake.");
+                const endTime = performance.now();
+                console.log(`HTTP Status Response Return: ${networkResponse.status} (${networkResponse.statusText})`);
+                console.log(`Network Transaction Latency Time: ${(endTime - startTime).toFixed(2)}ms`);
+
+                if (!networkResponse.ok) {
+                    throw new Error(`Upstream handshake failure error signal. Status code received: ${networkResponse.status}`);
+                }
                 
                 const responseData = await networkResponse.json();
+                console.log("Payload Package Received Cleanly:", responseData);
+                console.groupEnd();
+                
                 copilotHintText.textContent = responseData.hint;
 
             } catch (err) {
-                console.warn("API Error: ", err.message);
+                console.error("🔴 Connection Bridge Interrupt Fault Block Detected:");
+                console.error("Error Diagnostics Message:", err.message);
+                console.warn("🔄 Safe System Routing Mode Engaged: Falling back to static prompt dictionary cache entry.");
+                console.groupEnd();
+                
                 copilotHintText.textContent = `⚙️ [Offline Engine Mode]\n\n${activeQuestion.fallbackHint}`;
             }
         });
@@ -189,6 +207,8 @@
         }
 
         function evalAnswer(chosen, correct) {
+            const assetImg = document.getElementById('doll-e-asset');
+
             if (chosen === correct) {
                 runningScore += 100;
                 labVisual.classList.add('pulse-glow');
@@ -196,8 +216,22 @@
             } else {
                 runningScore = Math.max(0, runningScore - 25);
             }
+            
             currentRound++;
-            upgradeBar.style.width = `${(currentRound / totalRounds) * 100}%`;
+            const progressFactor = currentRound / totalRounds;
+            upgradeBar.style.width = `${progressFactor * 100}%`;
+
+            if (assetImg) {
+                const remainingGrayscale = 100 - (progressFactor * 100);
+                assetImg.style.filter = `grayscale(${remainingGrayscale}%)`;
+                
+                if (currentRound >= totalRounds) {
+                    labVisual.style.borderColor = "var(--accent-coral)";
+                    labVisual.style.boxShadow = "0 0 25px var(--accent-coral)";
+                    assetImg.style.transform = "scale(1.05)";
+                }
+            }
+
             setTimeout(loadRound, 300);
         }
 
