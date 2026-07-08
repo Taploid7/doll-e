@@ -65,7 +65,8 @@
 
         .button-zone { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .component-btn { background: white; border: 2px solid var(--primary-teal); border-radius: 8px; padding: 14px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: var(--text-dark); }
-        .component-btn:hover { background: #f0f9ff; transform: translateX(5px); border-color: var(--soft-purple); }
+        .component-btn:hover:not(:disabled) { background: #f0f9ff; transform: translateX(5px); border-color: var(--soft-purple); }
+        .component-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #cbd5e1; color: #94a3b8; }
 
         .copilot-btn { width: 100%; background: var(--accent-coral); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; }
         
@@ -91,7 +92,7 @@
         <div class="panel">
             <div class="panel-title">1. Lab View</div>
             <div class="image-placeholder" id="lab-visual">
-                <img id="doll-e-asset" src="charlotte-base.png" alt="Doll-E Base Panel Asset" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s ease, transform 0.5s ease;">
+                <img id="doll-e-asset" src="charlotte-base.jpg" alt="Doll-E Base Panel Asset" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: filter 0.5s ease, transform 0.5s ease;">
             </div>
         </div>
 
@@ -221,12 +222,12 @@
                 const b = document.createElement('button');
                 b.className = 'component-btn';
                 b.textContent = txt;
-                b.onclick = () => evalAnswer(txt, data.word);
+                b.onclick = (e) => evalAnswer(txt, data.word, e.target);
                 choicesZone.appendChild(b);
             });
         }
 
-        function evalAnswer(chosen, correct) {
+        function evalAnswer(chosen, correct, clickedButton) {
             const assetImg = document.getElementById('doll-e-asset');
 
             if (chosen === correct) {
@@ -239,31 +240,40 @@
 
                 labVisual.classList.add('pulse-glow');
                 setTimeout(() => labVisual.classList.remove('pulse-glow'), 1200);
+
+                currentRound++;
+                const progressFactor = currentRound / totalRounds;
+                upgradeBar.style.width = `${progressFactor * 100}%`;
+
+                if (assetImg) {
+                    const remainingGrayscale = 100 - (progressFactor * 100);
+                    assetImg.style.filter = `grayscale(${remainingGrayscale}%)`;
+                    
+                    if (currentRound >= totalRounds) {
+                        labVisual.style.borderColor = "var(--accent-coral)";
+                        labVisual.style.boxShadow = "0 0 25px var(--accent-coral)";
+                        assetImg.style.transform = "scale(1.05)";
+                    }
+                }
+
+                const allButtons = choicesZone.querySelectorAll('.component-btn');
+                allButtons.forEach(btn => btn.disabled = true);
+
+                setTimeout(loadRound, 800);
             } else {
                 runningScore = Math.max(0, runningScore - 25);
+                scoreDisplay.textContent = `Score: ${runningScore}`;
+                
                 statusFeedback.textContent = "❌ Circuit Glitch! Try again.";
                 statusFeedback.style.color = "var(--accent-coral)";
 
                 document.body.classList.add('incorrect-blink');
                 setTimeout(() => document.body.classList.remove('incorrect-blink'), 400);
-            }
-            
-            currentRound++;
-            const progressFactor = currentRound / totalRounds;
-            upgradeBar.style.width = `${progressFactor * 100}%`;
 
-            if (assetImg) {
-                const remainingGrayscale = 100 - (progressFactor * 100);
-                assetImg.style.filter = `grayscale(${remainingGrayscale}%)`;
-                
-                if (currentRound >= totalRounds) {
-                    labVisual.style.borderColor = "var(--accent-coral)";
-                    labVisual.style.boxShadow = "0 0 25px var(--accent-coral)";
-                    assetImg.style.transform = "scale(1.05)";
+                if (clickedButton) {
+                    clickedButton.disabled = true;
                 }
             }
-
-            setTimeout(loadRound, 800);
         }
 
         function endSimulation() {
